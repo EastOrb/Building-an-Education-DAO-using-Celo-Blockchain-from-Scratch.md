@@ -82,7 +82,7 @@ Replace **<your mnemonic here>** with your 12-word mnemonic phrase, and **<your 
 Now it's time to write your Educational DAO contract! Open a new file called **EducationalDAO.sol** in the **contracts/** directory of your project, and add the following code:
   
 ``` solidity
-  // SPDX-License-Identifier: MIT
+ // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.0;
 
@@ -100,9 +100,9 @@ contract EducationalDAO is Ownable {
     }
 
     IERC20 public celoToken;
-
     mapping(address => bool) public contributors;
     mapping(uint256 => Content) public contents;
+    uint256 private contentCounter;
 
     event ContentSubmitted(
         uint256 indexed id,
@@ -128,7 +128,8 @@ contract EducationalDAO is Ownable {
     ) external {
         require(contributors[msg.sender], "Not a contributor");
 
-        uint256 id = uint256(keccak256(abi.encodePacked(_title, _description, _url)));
+        uint256 id = ++contentCounter;
+
         contents[id] = Content({
             title: _title,
             description: _description,
@@ -146,10 +147,19 @@ contract EducationalDAO is Ownable {
         require(!content.approved && !content.rejected, "Content already processed");
 
         content.approved = true;
-        celoToken.transfer(msg.sender, content.reward);
+        celoToken.transferFrom(owner(), msg.sender, content.reward);
 
         emit ContentApproved(_id);
-   }
+    }
+
+    function rejectContent(uint256 _id) external onlyOwner {
+        Content storage content = contents[_id];
+        require(!content.approved && !content.rejected, "Content already processed");
+
+        content.rejected = true;
+
+        emit ContentRejected(_id);
+    }
 
     function addContributor(address _contributor) external onlyOwner {
         contributors[_contributor] = true;
@@ -159,6 +169,7 @@ contract EducationalDAO is Ownable {
         contributors[_contributor] = false;
     }
 }
+
 ````
   
 This code defines a simple EducationalDAO contract that allows contributors to submit educational content to the DAO, which can then be approved or rejected by the DAO owner. The approved content is rewarded with Celo tokens. The contract also allows the DAO owner to add or remove contributors.
